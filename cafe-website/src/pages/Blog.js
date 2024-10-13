@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 const BlogContainer = styled.div`
@@ -22,6 +22,32 @@ const PostContent = styled.p`
   color: #666;
 `;
 
+const Blog = () => {
+    const blogPosts = [
+      { id: 1, title: 'The Best Coffee Beans', content: 'Lorem ipsum...' },
+      { id: 2, title: 'How to Brew the Perfect Cup', content: 'Lorem ipsum...' },
+      { id: 3, title: 'The Art of Latte Art', content: 'Lorem ipsum...' },
+      // Add more posts here
+    ];
+  
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const postsPerPage = 2;
+  
+    const handleSearch = (e) => setSearchTerm(e.target.value);
+  
+    const filteredPosts = blogPosts.filter((post) =>
+      post.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  
+    const indexOfLastPost = currentPage * postsPerPage;
+    const indexOfFirstPost = indexOfLastPost - postsPerPage;
+    const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+  
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  
+  
+
 function Blog() {
   const posts = [
     {
@@ -35,16 +61,33 @@ function Blog() {
   ];
 
   return (
-    <BlogContainer>
-      <h1>Our Blog</h1>
-      {posts.map((post, index) => (
-        <Post key={index}>
-          <PostTitle>{post.title}</PostTitle>
-          <PostContent>{post.content}</PostContent>
-        </Post>
-      ))}
-    </BlogContainer>
+    <div>
+      <h2>Blog</h2>
+      <input
+        type="text"
+        placeholder="Search blog posts"
+        value={searchTerm}
+        onChange={handleSearch}
+      />
+      <ul>
+        {currentPosts.map((post) => (
+          <li key={post.id}>
+            <h3>{post.title}</h3>
+            <p>{post.content}</p>
+          </li>
+        ))}
+      </ul>
+
+      <div>
+        {Array.from({ length: Math.ceil(filteredPosts.length / postsPerPage) }, (_, i) => (
+          <button key={i} onClick={() => paginate(i + 1)}>
+            {i + 1}
+          </button>
+        ))}
+      </div>
+    </div>
   );
+};
 }
 
 export default Blog;
