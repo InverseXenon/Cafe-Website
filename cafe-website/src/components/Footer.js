@@ -29,7 +29,7 @@ const Icon = styled.a`
 function Footer() {
   return (
     <FooterContainer>
-      <p>&copy; 2024 Cozy Cafe. All rights reserved.</p>
+      <p>&copy; 2024 CafeCookCode. All rights reserved.</p>
       <SocialLinks>
         <Icon href="https://www.instagram.com" target="_blank">Instagram</Icon>
         <Icon href="https://www.facebook.com" target="_blank">Facebook</Icon>

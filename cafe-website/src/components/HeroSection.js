@@ -33,7 +33,7 @@ function HeroSection() {
       transition={{ duration: 1.5 }}
     >
       <Hero>
-        <HeroText>Welcome to Our Cozy Cafe</HeroText>
+        <HeroText>Welcome to Our CafeCookCode</HeroText>
       </Hero>
     </motion.div>
   );

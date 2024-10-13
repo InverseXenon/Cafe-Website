@@ -25,6 +25,15 @@ const Input = styled.input`
   font-size: 1rem;
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+`;
+
 const SubmitButton = styled.button`
   width: 100%;
   padding: 12px;
@@ -40,6 +49,28 @@ const SubmitButton = styled.button`
   }
 `;
 
+const ResetButton = styled.button`
+  width: 100%;
+  padding: 12px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-top: 10px;
+
+  &:hover {
+    background-color: #c0392b;
+  }
+`;
+
+const Notification = styled.p`
+  color: green;
+  text-align: center;
+  font-weight: bold;
+`;
+
 function Reservations() {
   const [formData, setFormData] = useState({
     name: '',
@@ -51,33 +82,42 @@ function Reservations() {
   });
 
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const validateForm = () => {
     const newErrors = {};
+    const { name, email, phone, date, time, guests } = formData;
 
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Valid email is required';
-    if (!formData.phone || formData.phone.length < 10) newErrors.phone = 'Valid phone number is required';
-    if (!formData.date) newErrors.date = 'Date is required';
-    if (!formData.time) newErrors.time = 'Time is required';
-    if (!formData.guests || formData.guests <= 0) newErrors.guests = 'Number of guests is required';
+    if (!name) newErrors.name = 'Name is required';
+    if (!email || !/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Valid email is required';
+    if (!phone || phone.length < 10) newErrors.phone = 'Valid phone number is required';
+    if (!date) newErrors.date = 'Date is required';
+    if (!time) newErrors.time = 'Time is required';
+    if (!guests || guests <= 0) newErrors.guests = 'Number of guests is required';
 
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length === 0) {
-      alert('Reservation successfully submitted!');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        date: '',
-        time: '',
-        guests: '',
-      });
+      setIsLoading(true);
+      setSuccessMessage('');
+      // Simulating an API call
+      setTimeout(() => {
+        setIsLoading(false);
+        setSuccessMessage('Reservation successfully submitted!');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          date: '',
+          time: '',
+          guests: '',
+        });
+      }, 2000);
     } else {
       setErrors(validationErrors);
     }
@@ -86,6 +126,19 @@ function Reservations() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleReset = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      date: '',
+      time: '',
+      guests: '',
+    });
+    setErrors({});
+    setSuccessMessage('');
   };
 
   return (
@@ -99,7 +152,7 @@ function Reservations() {
           placeholder="Full Name"
         />
         {errors.name && <p style={{ color: 'red' }}>{errors.name}</p>}
-        
+
         <Input
           name="email"
           type="email"
@@ -108,7 +161,7 @@ function Reservations() {
           placeholder="Email"
         />
         {errors.email && <p style={{ color: 'red' }}>{errors.email}</p>}
-        
+
         <Input
           name="phone"
           type="tel"
@@ -117,7 +170,7 @@ function Reservations() {
           placeholder="Phone Number"
         />
         {errors.phone && <p style={{ color: 'red' }}>{errors.phone}</p>}
-        
+
         <Input
           name="date"
           type="date"
@@ -125,25 +178,39 @@ function Reservations() {
           onChange={handleChange}
         />
         {errors.date && <p style={{ color: 'red' }}>{errors.date}</p>}
-        
-        <Input
-          name="time"
-          type="time"
-          value={formData.time}
-          onChange={handleChange}
-        />
+
+        <Select name="time" value={formData.time} onChange={handleChange}>
+          <option value="">Select Time</option>
+          {/* Add time options based on restaurant hours */}
+          {[...Array(12).keys()].map(i => {
+            const hour = i + 10; // Example from 10 AM to 9 PM
+            return (
+              <option key={hour} value={`${hour < 10 ? '0' : ''}${hour}:00`}>
+                {hour < 10 ? '0' : ''}{hour}:00
+              </option>
+            );
+          })}
+        </Select>
         {errors.time && <p style={{ color: 'red' }}>{errors.time}</p>}
-        
+
         <Input
           name="guests"
           type="number"
           value={formData.guests}
           onChange={handleChange}
           placeholder="Number of Guests"
+          min="1"
         />
         {errors.guests && <p style={{ color: 'red' }}>{errors.guests}</p>}
-        
-        <SubmitButton type="submit">Reserve</SubmitButton>
+
+        <SubmitButton type="submit" disabled={isLoading}>
+          {isLoading ? 'Submitting...' : 'Reserve'}
+        </SubmitButton>
+        <ResetButton type="button" onClick={handleReset}>
+          Reset
+        </ResetButton>
+
+        {successMessage && <Notification>{successMessage}</Notification>}
       </Form>
     </ReservationContainer>
   );
