@@ -1,14 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
 
-// Styled components for grid layout
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCWVGusVBkxxeNDVZpHSH4x_RtP6-HndgU",
+  authDomain: "cafe-cook-code.firebaseapp.com",
+  projectId: "cafe-cook-code",
+  storageBucket: "cafe-cook-code.appspot.com",
+  messagingSenderId: "534388611148",
+  appId: "1:534388611148:web:454751462f79c419f87ce9",
+  measurementId: "G-JPL62J5D4S"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Styled components
 const MenuContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   grid-gap: 20px;
   padding: 20px;
-  justify-items: center; /* Center the menu items */
+  justify-items: center;
+  background-color: #2e8b57;
 `;
 
 const MenuItem = styled.div`
@@ -40,10 +56,19 @@ const CartButtons = styled.div`
   button {
     margin: 0 5px;
     padding: 5px 10px;
-    font-size: 16px; /* Increase font size */
+    font-size: 16px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    color: white;
+  }
+
+  .increment {
+    background-color: #4caf50;
+  }
+
+  .decrement {
+    background-color: #ff5722;
   }
 `;
 
@@ -54,28 +79,47 @@ const FilterInput = styled.input`
   border-radius: 5px;
   width: 100%;
   font-size: 16px;
+  background-color: #2e8b57;
+  color: white;
   transition: border-color 0.3s;
-
   &:focus {
     outline: none;
-    border-color: #4caf50; /* Change border color on focus */
-    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5); /* Add shadow on focus */
+    border-color: #8fcf8a;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  }
+`;
+
+const FilterButtons = styled.div`
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    &:hover {
+      background-color: #3e8e41;
+    }
   }
 `;
 
 const SubmitButton = styled.button`
   display: block;
-  margin: 20px auto; /* Centering the button */
-  padding: 10px 20px; /* Making it bigger */
-  font-size: 18px; /* Increase font size */
-  background-color: #4caf50; /* Green color */
+  margin: 20px auto;
+  padding: 10px 20px;
+  font-size: 18px;
+  background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-
   &:hover {
-    background-color: #45a049; /* Darker green on hover */
+    background-color: #45a049;
   }
 `;
 
@@ -96,157 +140,243 @@ const InputField = styled.input`
   font-size: 16px;
 `;
 
-// Function to send order data to ThingSpeak
-const sendOrderToThingSpeak = (orderData) => {
-  const THINGSPEAK_WRITE_API_KEY = 'YOUR_WRITE_API_KEY'; // Replace with your Write API Key
-  const url = `https://api.thingspeak.com/update?api_key=${THINGSPEAK_WRITE_API_KEY}`;
+const CouponContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
 
-  // Construct the data to be sent
-  const params = {
-    field1: orderData.name, // Customer Name
-    field2: orderData.address, // Address
-    field3: orderData.phone, // Phone Number
-    field4: orderData.cart.map(item => `${item.name} x${item.quantity}`).join(', '), // Ordered Items
-    field5: orderData.cart.reduce((acc, item) => acc + item.price * item.quantity, 0) // Total Price
-  };
+const NotificationModal = styled.div`
+  display: ${({ show }) => (show ? 'block' : 'none')};
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+`;
 
-  return axios.post(url, null, { params });
-};
+const Overlay = styled.div`
+  display: ${({ show }) => (show ? 'block' : 'none')};
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+`;
+
+const CouponCode = ({ applyCoupon, couponCode, setCouponCode }) => (
+  <CouponContainer>
+    <InputField
+      type="text"
+      placeholder="Enter Coupon Code"
+      value={couponCode}
+      onChange={(e) => setCouponCode(e.target.value)}
+    />
+    <SubmitButton onClick={applyCoupon}>Apply Coupon</SubmitButton>
+    <p>Available Coupons: DISCOUNT10 - 10% off</p>
+  </CouponContainer>
+);
 
 const Menu = () => {
-    const menuItems = [
-        { id: 1, name: 'Cappuccino', price: 3.5, imageUrl: 'https://source.unsplash.com/featured/?cappuccino' },
-        { id: 2, name: 'Latte', price: 4.0, imageUrl: 'https://source.unsplash.com/featured/?latte' },
-        { id: 3, name: 'Espresso', price: 2.5, imageUrl: 'https://source.unsplash.com/featured/?espresso' },
-        { id: 4, name: 'Croissant', price: 2.0, imageUrl: 'https://source.unsplash.com/featured/?croissant' },
-        { id: 5, name: 'Bagel', price: 1.5, imageUrl: 'https://source.unsplash.com/featured/?bagel' },
-        { id: 6, name: 'Muffin', price: 2.5, imageUrl: 'https://source.unsplash.com/featured/?muffin' },
-        { id: 7, name: 'Flat White', price: 4.0, imageUrl: 'https://source.unsplash.com/featured/?flat-white' },
-        { id: 8, name: 'Mocha', price: 4.5, imageUrl: 'https://source.unsplash.com/featured/?mocha' },
-        { id: 9, name: 'Chai Latte', price: 3.0, imageUrl: 'https://source.unsplash.com/featured/?chai-latte' },
-        { id: 10, name: 'Iced Coffee', price: 3.5, imageUrl: 'https://source.unsplash.com/featured/?iced-coffee' },
-        { id: 11, name: 'Scone', price: 2.0, imageUrl: 'https://source.unsplash.com/featured/?scone' },
-        { id: 12, name: 'Fruit Tart', price: 3.0, imageUrl: 'https://source.unsplash.com/featured/?fruit-tart' },
-        { id: 13, name: 'Pancakes', price: 5.0, imageUrl: 'https://source.unsplash.com/featured/?pancakes' },
-        { id: 14, name: 'Omelette', price: 4.5, imageUrl: 'https://source.unsplash.com/featured/?omelette' },
-        { id: 15, name: 'Sandwich', price: 5.5, imageUrl: 'https://source.unsplash.com/featured/?sandwich' },
-        { id: 16, name: 'Salad', price: 4.0, imageUrl: 'https://source.unsplash.com/featured/?salad' },
-        { id: 17, name: 'Nachos', price: 6.0, imageUrl: 'https://source.unsplash.com/featured/?nachos' },
-        { id: 18, name: 'Pizza Slice', price: 2.5, imageUrl: 'https://source.unsplash.com/featured/?pizza' },
-        { id: 19, name: 'Chocolate Cake', price: 3.5, imageUrl: 'https://source.unsplash.com/featured/?cake' },
-        { id: 20, name: 'Ice Cream', price: 2.0, imageUrl: 'https://source.unsplash.com/featured/?ice-cream' },
-      ];
+  const menuItems = [
+    { id: 1, name: 'Cappuccino', category: 'coffee', price: 150 },
+    { id: 2, name: 'Latte', category: 'coffee', price: 180 },
+    { id: 3, name: 'Espresso', category: 'coffee', price: 120 },
+    { id: 4, name: 'Samosa', category: 'snacks', price: 30 },
+    { id: 5, name: 'Pav Bhaji', category: 'snacks', price: 70 },
+    { id: 6, name: 'Dhokla', category: 'snacks', price: 50 },
+    { id: 7, name: 'Flat White', category: 'coffee', price: 160 },
+    { id: 8, name: 'Mocha', category: 'coffee', price: 200 },
+    { id: 9, name: 'Chai Latte', category: 'coffee', price: 100 },
+    { id: 10, name: 'Iced Coffee', category: 'coffee', price: 140 },
+    { id: 11, name: 'Paneer Tikka', category: 'appetizer', price: 120 },
+    { id: 12, name: 'Biryani', category: 'main course', price: 220 },
+    { id: 13, name: 'Masala Dosa', category: 'breakfast', price: 90 },
+    { id: 14, name: 'Aloo Paratha', category: 'breakfast', price: 80 },
+    { id: 15, name: 'Butter Chicken', category: 'main course', price: 280 },
+    { id: 16, name: 'Dal Makhani', category: 'main course', price: 160 },
+    { id: 17, name: 'Chole Bhature', category: 'main course', price: 150 },
+    { id: 18, name: 'Chaat', category: 'snacks', price: 40 },
+    { id: 19, name: 'Gulab Jamun', category: 'dessert', price: 60 },
+    { id: 20, name: 'Rasgulla', category: 'dessert', price: 50 },
+  ];
 
   const [cart, setCart] = useState([]);
   const [filter, setFilter] = useState('');
-  const [showOrderForm, setShowOrderForm] = useState(false); // To toggle order form
+  const [category, setCategory] = useState('all');
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
-  // Filter menu items based on user input
-  const filteredMenuItems = menuItems.filter(item => 
-    item.name.toLowerCase().includes(filter.toLowerCase())
+  const filteredMenuItems = menuItems.filter(
+    (item) =>
+      item.name.toLowerCase().includes(filter.toLowerCase()) &&
+      (category === 'all' || item.category === category)
   );
 
-  // Add item to cart or increase quantity if already in cart
   const addToCart = (item) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
+    const existingItem = cart.find((cartItem) => cartItem.id === item.id);
     if (existingItem) {
-      setCart(cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
+      setCart(
+        cart.map((cartItem) =>
+          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+        )
+      );
     } else {
       setCart([...cart, { ...item, quantity: 1 }]);
     }
   };
 
-  // Decrease the quantity of an item in the cart
-  const decreaseQuantity = (item) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    if (existingItem.quantity > 1) {
-      setCart(cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity - 1 }
-          : cartItem
-      ));
+  const removeFromCart = (item) => {
+    const existingItem = cart.find((cartItem) => cartItem.id === item.id);
+    if (existingItem && existingItem.quantity > 1) {
+      setCart(
+        cart.map((cartItem) =>
+          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity - 1 } : cartItem
+        )
+      );
     } else {
-      setCart(cart.filter(cartItem => cartItem.id !== item.id));
+      setCart(cart.filter((cartItem) => cartItem.id !== item.id));
     }
   };
 
-  // Remove item from cart
-  const removeFromCart = (id) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-
-  // Show the order form when user confirms the order
-  const handleShowOrderForm = () => {
-    if (cart.length > 0) {
-      const orderData = {
-        name,
-        address,
-        phone,
-        cart,
-      };
-
-      // Send order to ThingSpeak
-      sendOrderToThingSpeak(orderData)
-        .then(() => {
-          alert('Order submitted successfully!');
-          // Reset form and cart
-          setCart([]);
-          setName('');
-          setAddress('');
-          setPhone('');
-          setShowOrderForm(false);
-        })
-        .catch((error) => {
-          console.error('Error submitting order:', error);
-          alert('Error submitting order, please try again later.');
-        });
+  const applyCoupon = () => {
+    if (couponCode === 'DISCOUNT10') {
+      setDiscount(10);
+      setNotificationMessage('Coupon applied! 10% off on your total order.');
+      setShowNotification(true);
     } else {
-      alert('Please add items to your cart first!');
+      setNotificationMessage('Invalid coupon code.');
+      setShowNotification(true);
     }
   };
+
+  const handleOrderSubmit = async () => {
+    const orderData = {
+      name,
+      address,
+      phone,
+      cart,
+      discount,
+      totalPrice: cart.reduce((total, item) => total + item.price * item.quantity, 0) * (1 - discount / 100),
+    };
+
+    try {
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      console.log("Order submitted with ID: ", docRef.id);
+      setCart([]);
+      setName('');
+      setAddress('');
+      setPhone('');
+      setDiscount(0);
+      setShowOrderForm(false);
+      setNotificationMessage('Order submitted successfully!');
+      setShowNotification(true);
+    } catch (e) {
+      console.error("Error adding order: ", e);
+      setNotificationMessage('Failed to submit order.');
+      setShowNotification(true);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotification(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [showNotification]);
 
   return (
     <div>
-      <h1>Menu</h1>
       <FilterInput
         type="text"
-        placeholder="Search Menu"
+        placeholder="Search for menu items..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
+      <FilterButtons>
+      <button onClick={() => setCategory('all')}>All</button>
+      <button onClick={() => setCategory('coffee')}>Coffee</button>
+      <button onClick={() => setCategory('snacks')}>Snacks</button>
+      <button onClick={() => setCategory('appetizer')}>Appetizer</button>
+      <button onClick={() => setCategory('main course')}>Main Course</button>
+      <button onClick={() => setCategory('breakfast')}>Breakfast</button>
+      <button onClick={() => setCategory('dessert')}>Dessert</button>
+      </FilterButtons>
       <MenuContainer>
-        {filteredMenuItems.map(item => (
+        {filteredMenuItems.map((item) => (
           <MenuItem key={item.id}>
-            <img src={item.imageUrl} alt={item.name} width="100" />
-            <h2>{item.name}</h2>
-            <p>Price: ${item.price.toFixed(2)}</p>
+            <h3>{item.name}</h3>
+            <p>Rs {item.price.toFixed(2)}</p>
             <button onClick={() => addToCart(item)}>Add to Cart</button>
           </MenuItem>
         ))}
       </MenuContainer>
-      <CartContainer>
-        <h2>Cart</h2>
-        {cart.map(item => (
-          <CartItem key={item.id}>
-            <span>{item.name} (x{item.quantity})</span>
-            <CartButtons>
-              <button onClick={() => decreaseQuantity(item)}>-</button>
-              <button onClick={() => removeFromCart(item.id)}>Remove</button>
-            </CartButtons>
-          </CartItem>
-        ))}
-        <p>
-          Total Price: ${cart.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}
-        </p>
-        <SubmitButton onClick={handleShowOrderForm}>Confirm Order</SubmitButton>
-      </CartContainer>
+
+      {cart.length > 0 && (
+        <CartContainer>
+          <h2>Your Cart</h2>
+          {cart.map((item) => (
+            <CartItem key={item.id}>
+              <span>
+                {item.name} x {item.quantity}
+              </span>
+              <CartButtons>
+                <button className="increment" onClick={() => addToCart(item)}>+</button>
+                <button className="decrement" onClick={() => removeFromCart(item)}>-</button>
+              </CartButtons>
+            </CartItem>
+          ))}
+          <CouponCode
+            applyCoupon={applyCoupon}
+            couponCode={couponCode}
+            setCouponCode={setCouponCode}
+          />
+          <h3>Total: Rs {(cart.reduce((total, item) => total + item.price * item.quantity, 0) * (1 - discount / 100)).toFixed(2)}</h3>
+          <SubmitButton onClick={() => setShowOrderForm(true)}>Proceed to Order</SubmitButton>
+        </CartContainer>
+      )}
+
+      {showOrderForm && (
+        <OrderForm>
+          <h2>Order Details</h2>
+          <InputField
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <InputField
+            type="text"
+            placeholder="Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+          <InputField
+            type="text"
+            placeholder="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <SubmitButton onClick={handleOrderSubmit}>Submit Order</SubmitButton>
+        </OrderForm>
+      )}
+
+      <Overlay show={showNotification} onClick={() => setShowNotification(false)} />
+      <NotificationModal show={showNotification}>
+        <p>{notificationMessage}</p>
+      </NotificationModal>
     </div>
   );
 };

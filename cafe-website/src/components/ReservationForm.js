@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { getAnalytics, logEvent } from 'firebase/analytics'; // Assuming firebase.js is in the same directory
+
 
 const FormContainer = styled.div`
   margin: 50px;
@@ -48,14 +50,31 @@ function ReservationForm() {
     message: ''
   });
 
+  const analytics = getAnalytics(); 
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Reservation made:', formData);
+    try {
+      // Log event using analytics
+      logEvent(analytics, 'reservation_submitted', formData);
+      console.log('Reservation logged:', formData);
+      alert('Reservation Successful!');
+      setFormData({
+        name: '',
+        email: '',
+        date: '',
+        time: '',
+        message: '',
+      });
+    } catch (error) {
+      console.error('Error logging reservation event: ', error);
+    }
   };
+  
 
   return (
     <FormContainer>

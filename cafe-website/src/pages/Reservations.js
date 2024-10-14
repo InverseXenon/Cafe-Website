@@ -1,6 +1,11 @@
+// Reservations.js
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { db, analytics } from '../components/firebase'; // Import db and analytics from firebase.js
+import { collection, addDoc } from 'firebase/firestore'; // Firestore methods
+import { logEvent } from 'firebase/analytics'; // Firebase Analytics
 
+// Styled Components
 const ReservationContainer = styled.div`
   padding: 50px;
   background-color: #f9f9f9;
@@ -71,6 +76,7 @@ const Notification = styled.p`
   font-weight: bold;
 `;
 
+// Reservations Component
 function Reservations() {
   const [formData, setFormData] = useState({
     name: '',
@@ -85,6 +91,7 @@ function Reservations() {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Form Validation
   const validateForm = () => {
     const newErrors = {};
     const { name, email, phone, date, time, guests } = formData;
@@ -99,14 +106,21 @@ function Reservations() {
     return newErrors;
   };
 
+  // Handle Form Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length === 0) {
       setIsLoading(true);
       setSuccessMessage('');
-      // Simulating an API call
-      setTimeout(() => {
+
+      try {
+        // Add data to Firestore
+        await addDoc(collection(db, 'reservations'), formData);
+
+        // Log event using analytics
+        logEvent(analytics, 'reservation_submitted', formData);
+
         setIsLoading(false);
         setSuccessMessage('Reservation successfully submitted!');
         setFormData({
@@ -117,17 +131,22 @@ function Reservations() {
           time: '',
           guests: '',
         });
-      }, 2000);
+      } catch (error) {
+        console.error('Error submitting reservation: ', error);
+        setIsLoading(false);
+      }
     } else {
       setErrors(validationErrors);
     }
   };
 
+  // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
+  // Handle Form Reset
   const handleReset = () => {
     setFormData({
       name: '',
@@ -181,9 +200,8 @@ function Reservations() {
 
         <Select name="time" value={formData.time} onChange={handleChange}>
           <option value="">Select Time</option>
-          {/* Add time options based on restaurant hours */}
           {[...Array(12).keys()].map(i => {
-            const hour = i + 10; // Example from 10 AM to 9 PM
+            const hour = i + 10; // Example: from 10 AM to 9 PM
             return (
               <option key={hour} value={`${hour < 10 ? '0' : ''}${hour}:00`}>
                 {hour < 10 ? '0' : ''}{hour}:00

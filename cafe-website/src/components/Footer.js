@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { FaStar, FaStarHalfAlt, FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
 
 const FooterContainer = styled.footer`
   background-color: #333;
@@ -12,11 +13,23 @@ const FooterContainer = styled.footer`
 `;
 
 const SocialLinks = styled.div`
-  margin-top: 10px;
+  margin-top: 15px;
+
+  svg {
+    margin: 0 10px;
+    cursor: pointer;
+    color: ;
+    font-size: 1.5rem;
+    transition: color 0.3s;
+
+    &:hover {
+      color: #2e8b57;
+    }
+  }
 `;
 
 const Icon = styled.a`
-  margin: 0 10px;
+  margin: 10px 100px;
   color: white;
   text-decoration: none;
   font-size: 1.5rem;
@@ -31,9 +44,9 @@ function Footer() {
     <FooterContainer>
       <p>&copy; 2024 CafeCookCode. All rights reserved.</p>
       <SocialLinks>
-        <Icon href="https://www.instagram.com" target="_blank">Instagram</Icon>
-        <Icon href="https://www.facebook.com" target="_blank">Facebook</Icon>
-        <Icon href="https://www.twitter.com" target="_blank">Twitter</Icon>
+              <FaFacebook title="Share on Facebook" />
+              <FaTwitter title="Share on Twitter" />
+              <FaInstagram title="Share on Instagram" />
       </SocialLinks>
     </FooterContainer>
   );

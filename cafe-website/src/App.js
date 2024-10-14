@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
-import AboutUs from './pages/AboutUs';
+import About from './pages/AboutUs';
 import Reservations from './pages/Reservations';
 import Navbar from './Navbar';
 import Blog from './pages/Blog';
@@ -19,7 +19,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
-          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/about" element={<About />} />
           <Route path="/reservations" element={<Reservations />} />
           <Route path="/blog" element={<Blog />} />
         </Routes>
